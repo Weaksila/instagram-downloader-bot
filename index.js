@@ -129,7 +129,7 @@ bot.on('message', async (msg) => {
     if (msg.text && (msg.text.includes('instagram.com/reel/') || msg.text.includes('instagram.com/p/') || msg.text.includes('instagram.com/reels/'))) {
         const url = msg.text.match(/https?:\/\/(www\.)?instagram\.com\/(reel|p|reels)\/[a-zA-Z0-9_-]+\/?/)?.[0];
         
-        if (url) {
+            console.log('Processing Instagram URL:', url);
             const waitMsg = await bot.sendMessage(msg.chat.id, '⏳ **Video yuklanmoqda...**', { parse_mode: 'Markdown' });
             
             try {
@@ -142,7 +142,7 @@ bot.on('message', async (msg) => {
                         videoUrl = results.url_list[0];
                     }
                 } catch (e) {
-                    console.log('Method 1 failed');
+                    console.log('Method 1 failed:', e.message);
                 }
 
                 // Method 2: TiklyDown API (Robust backup)
