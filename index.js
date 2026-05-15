@@ -4,6 +4,7 @@ const { instagramGetUrl } = require('instagram-url-direct');
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
+const https = require('https');
 
 const token = process.env.BOT_TOKEN;
 const adminId = process.env.ADMIN_ID;
@@ -134,25 +135,42 @@ bot.on('message', async (msg) => {
             try {
                 let videoUrl = null;
                 
-                // Primary
+                // Method 1: instagram-url-direct
                 try {
                     const results = await instagramGetUrl(url);
                     if (results && results.url_list && results.url_list.length > 0) {
                         videoUrl = results.url_list[0];
                     }
                 } catch (e) {
-                    console.log('Primary downloader failed');
+                    console.log('Method 1 failed');
                 }
 
-                // Backup
+                // Method 2: TiklyDown API (Robust backup)
                 if (!videoUrl) {
                     try {
-                        const backupRes = await axios.get(`https://api.vyturex.com/ig?url=${encodeURIComponent(url)}`);
+                        const tiklyRes = await axios.get(`https://api.tiklydown.eu.org/api/download/instagram?url=${encodeURIComponent(url)}`, {
+                            httpsAgent: new https.Agent({ rejectUnauthorized: false }),
+                            timeout: 10000
+                        });
+                        if (tiklyRes.data && tiklyRes.data.url) {
+                            videoUrl = tiklyRes.data.url;
+                        } else if (tiklyRes.data && tiklyRes.data.result && tiklyRes.data.result.url) {
+                            videoUrl = tiklyRes.data.result.url;
+                        }
+                    } catch (e) {
+                        console.log('Method 2 failed');
+                    }
+                }
+                
+                // Method 3: Vyturex API
+                if (!videoUrl) {
+                    try {
+                        const backupRes = await axios.get(`https://api.vyturex.com/ig?url=${encodeURIComponent(url)}`, { timeout: 10000 });
                         if (backupRes.data && backupRes.data.url) {
                             videoUrl = backupRes.data.url;
                         }
                     } catch (e) {
-                        console.log('Backup downloader failed');
+                        console.log('Method 3 failed');
                     }
                 }
 
@@ -163,14 +181,14 @@ bot.on('message', async (msg) => {
                     });
                     bot.deleteMessage(msg.chat.id, waitMsg.message_id);
                 } else {
-                    bot.editMessageText('❌ **Xatolik:** Videoni topib bo\'lmadi. Havola noto\'g\'ri yoki profil yopiq.', {
+                    bot.editMessageText('❌ **Xatolik:** Videoni yuklab bo\'lmadi. Havola noto\'g\'ri, profil yopiq yoki botda vaqtinchalik muammo.', {
                         chat_id: msg.chat.id,
                         message_id: waitMsg.message_id
                     });
                 }
             } catch (err) {
                 console.error('Download error:', err);
-                bot.editMessageText('❌ **Xatolik:** Yuklashda xatolik yuz berdi.', {
+                bot.editMessageText('❌ **Xatolik:** Yuklashda xatolik yuz berdi. Iltimos, birozdan so\'ng qayta urinib ko\'ring.', {
                     chat_id: msg.chat.id,
                     message_id: waitMsg.message_id
                 });
